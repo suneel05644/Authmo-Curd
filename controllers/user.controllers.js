@@ -8,6 +8,7 @@ const userService = require("./user.service");
 
 exports.register = async (req, res) => {
   try {
+    const { role } = req.body;
     const oldUser = await User.findOne({ email: req.body.email });
 
     if (oldUser) {
@@ -18,6 +19,7 @@ exports.register = async (req, res) => {
       email: req.body.email,
       name: req.body.name,
       password: req.body.password,
+      role: role || "user",
     });
 
     // Validate user input
@@ -87,6 +89,12 @@ exports.login = async (req, res) => {
       httpOnly: true,
     });
 
+    // await User.findByIdAndUpdate(user._id, { token });
+    // res.status(200).json({
+    //   data: { email: user.email, role: user.role },
+    //   token,
+    // });
+
     await user.save();
     res.status(201).send({ sucess: true, data: user });
   } catch (err) {
@@ -101,24 +109,55 @@ exports.welcome = (req, res) => {
 
 exports.details = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id);
-    if (!user) {
-      return res.status(404);
+    if (req.user.user_id == req.params.id) {
+      const user = await User.findById(req.params.id);
+      if (!user) {
+        return res.status(404);
+      }
+      res.status(200).send(user);
     }
-    res.status(200).send(user);
   } catch (error) {
     res.status(500).send(error);
   }
 };
 
-exports.getall = function (req, res) {
-  User.find({}, function (err, Users) {
-    if (err) return done(err);
+exports.getall = async (req, res) => {
+  try {
+    const users = await User.find();
+    res.status(200).json({
+      data: users,
+    });
+  } catch (error) {
+    res.status(500).send(error);
+  }
+};
 
-    if (Users) {
-      console.log("Users count : " + user.length);
+exports.update = async (req, res) => {
+  try {
+    if (req.user.user_id == req.params.id) {
+      await User.findOneAndUpdate(req.params.id, req.body, {
+        new: true,
+      });
+      return res
+        .status(200)
+        .json({ success: true, msg: "User Update successfully" });
+    } else {
+      res.status(401).json({ success: false, error: "user not Updated" });
     }
-  });
+  } catch (error) {
+    res.status(500).send(error);
+  }
+};
+
+exports.logout = async (req, res) => {
+  try {
+    res.clearCookie("jwt");
+    return res
+      .status(200)
+      .json({ success: true, msg: "User logout successfully" });
+  } catch (error) {
+    res.status(500).send(error);
+  }
 };
 
 exports.Delete = async (req, res) => {
@@ -136,17 +175,6 @@ exports.Delete = async (req, res) => {
     res.status(500).send(error);
   }
 };
-
-// exports.getall = async (req, res) => {
-//   try {
-//     const user = await User.findAll({});
-//     console.log(user);
-//     res.send(user);
-//   } catch (err) {
-//     console.log(err);
-//     res.send(err);
-//   }
-// };
 
 exports.deleteall = async function (req, res) {
   try {

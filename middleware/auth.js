@@ -1,5 +1,4 @@
 const jwt = require("jsonwebtoken");
-const User = require("../models/user.model");
 const config = require("../config/auth.config");
 
 const authenticateJWT = (req, res, next) => {
@@ -12,18 +11,16 @@ const authenticateJWT = (req, res, next) => {
       if (err) {
         return res.sendStatus(403);
       }
-      // const Pad = await User.findOne({ id: user._id, token: user.token });
       if (!user) {
-        return res.sendStatus(403);
+        return res.sendStatus(404);
       }
       req.token = token;
-      req.user = user;
-      // console.log(req.user);
-      next();
+      req.userID = user.user_id.toString();
+      console.log(req.userID);
+      return next();
     });
   } else {
-    res.sendStatus(401).json({
-      success: false,
+    res.status(401).send({
       error:
         "You are not registered. Register here: https://localhost:3500/user/register",
     });
