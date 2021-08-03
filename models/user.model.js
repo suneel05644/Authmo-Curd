@@ -41,6 +41,10 @@ let UserSchema = new Schema({
     },
   ],
   token: { type: String },
+  resetlink: {
+    data: String,
+    default: "",
+  },
   date: {
     type: Date,
     default: Date.now,
