@@ -24,7 +24,13 @@ let BookSchema = new Schema({
     ref: "User",
     required: true,
   },
-  token: { type: String },
+
+  isdelete: {
+    type: Boolean,
+    default: false,
+    enum: [true,false],
+  },
+
   date: {
     type: Date,
   },

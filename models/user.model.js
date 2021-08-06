@@ -1,5 +1,7 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
+const bcrypt = require("bcryptjs");
+const bcryptSalt = 10;
 
 let UserSchema = new Schema({
   role: {
@@ -40,16 +42,41 @@ let UserSchema = new Schema({
       ref: "Book",
     },
   ],
-  token: { type: String },
+  token: [String],
   resetlink: {
     data: String,
     default: "",
+  },
+  resetlinkExpires: {
+    type: Date,
+    required: false,
+  },
+  isdelete: {
+    type: Boolean,
+    default: false,
+    enum: [true, false],
+    trim: true,
   },
   date: {
     type: Date,
     default: Date.now,
   },
 });
+
+// UserSchema.pre("save", function (next) {
+//   if (!this.isModified("password") || this.isNew) return next();
+//   this.newPassword = Date.now() - 1000;
+//   next();
+// });
+
+// UserSchema.pre("save", async function (next) {
+//   if (!this.isModified("password")) {
+//     return next();
+//   }
+//   const hash = await bcrypt.hash(this.password, Number(bcryptSalt));
+//   this.password = hash;
+//   next();
+// });
 
 const User = mongoose.model("user", UserSchema);
 
