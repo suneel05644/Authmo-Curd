@@ -76,44 +76,48 @@ exports.login = async (req, res, role) => {
     if (!user) {
       return res.status(401).json({ err: "unauthorized" });
     }
-
-    // res.status(200).json({ sucess: true, data: user });
-    const authenticted = userService.comparePassword(
-      req.body.password,
-      user.password
-    );
-    if (!authenticted) {
-      return res.status(401).json({ err: "unauthorized" });
-    }
-    // Create token
-    const token = jwt.sign(
-      { user_id: user._id, role: user.role },
-      config.secret,
-      {
-        expiresIn: "2h",
+    //check the role
+    if (req.role == "user" || "admin") {
+      // res.status(200).json({ sucess: true, data: user });
+      const authenticted = userService.comparePassword(
+        req.body.password,
+        user.password
+      );
+      if (!authenticted) {
+        return res.status(401).json({ err: "unauthorized" });
       }
-    );
+      // Create token
+      const token = jwt.sign(
+        { user_id: user._id, role: user.role },
+        config.secret,
+        {
+          expiresIn: "2h",
+        }
+      );
 
-    if (!token) {
-      return res.status(403).send("A token is required for authentication");
+      if (!token) {
+        return res.status(403).send("A token is required for authentication");
+      }
+
+      // save user token
+      user.token = token;
+
+      res.cookie("jwt", user.token, {
+        expires: new Date(Date.now() + 20000000),
+        httpOnly: true,
+      });
+
+      // await User.findByIdAndUpdate(user._id, { token });
+      // res.status(200).json({
+      //   data: { email: user.email, role: user.role },
+      //   token,
+      // });
+
+      await user.save();
+      res.status(201).send({ sucess: true, data: user });
+    } else {
+      res.status(401).json({ success: false, error: "user not Updated" });
     }
-
-    // save user token
-    user.token = token;
-
-    res.cookie("jwt", user.token, {
-      expires: new Date(Date.now() + 20000000),
-      httpOnly: true,
-    });
-
-    // await User.findByIdAndUpdate(user._id, { token });
-    // res.status(200).json({
-    //   data: { email: user.email, role: user.role },
-    //   token,
-    // });
-
-    await user.save();
-    res.status(201).send({ sucess: true, data: user });
   } catch (err) {
     console.error(err);
     return res.status(500).send(err);
@@ -204,11 +208,15 @@ exports.resetpassword = (req, res) => {
 exports.details = async (req, res) => {
   try {
     if (req.user.user_id == req.params.id) {
-      const user = await User.findById(req.params.id);
-      if (!user) {
-        return res.status(404);
+      if (req.role == "user" || "admin") {
+        const user = await User.findById(req.params.id);
+        if (!user) {
+          return res.status(404);
+        }
+        res.status(200).send(user);
+      } else {
+        res.status(401).json({ success: false, error: "user not Updated" });
       }
-      res.status(200).send(user);
     }
   } catch (error) {
     res.status(500).send(error);
@@ -229,12 +237,18 @@ exports.getall = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     if (req.user.user_id == req.params.id) {
-      await User.findOneAndUpdate(req.params.id, req.body, {
-        new: true,
-      });
-      return res
-        .status(200)
-        .json({ success: true, msg: "User Update successfully" });
+      if (req.role == "user" || "admin") {
+        await User.findOneAndUpdate(req.params.id, req.body, {
+          new: true,
+        });
+        return res
+          .status(200)
+          .json({ success: true, msg: "User Update successfully" });
+      } else {
+        res
+          .status(401)
+          .json({ success: false, error: "Only Admin Or User Updated" });
+      }
     } else {
       res.status(401).json({ success: false, error: "user not Updated" });
     }
@@ -257,35 +271,37 @@ exports.logout = async (req, res) => {
 exports.Delete = async (req, res) => {
   try {
     console.log(req.userID, req.params.id);
-    const isdelete = Boolean(req.body.isdelete);
-    console.log(isdelete);
+    const userdata = await User.findOne({
+      _id: req.params.id,
+    });
     if (req.userID == req.params.id) {
       if (req.role == "user" || "admin") {
-        // if (isdelete == false) {
-        await User.findByIdAndUpdate(
-          req.params.id,
-          { $set: { isdelete: true } },
-          async (err, category) => {
-            if (err) return next(err);
-            console.log(category);
-            category.deletedAt = new Date();
-            await category.save();
-            res
-              .status(200)
-              .json({ message: "User Delete Successfully", data: category });
-          }
-        );
-      } else {
-        return res
-          .status(401)
-          .json({ success: false, error: "User Already Deleted" });
+        console.log(req.isdelete);
+        if (userdata.isdelete == false) {
+          await User.findByIdAndUpdate(
+            req.params.id,
+            { $set: { isdelete: true } },
+            async (err, category) => {
+              if (err) return next(err);
+              console.log(category);
+              category.deletedAt = new Date();
+              await category.save();
+              res
+                .status(200)
+                .json({ message: "User Delete Successfully", data: category });
+            }
+          );
+        } else {
+          return res
+            .status(401)
+            .json({ success: false, error: "User Already Deleted" });
+        }
       }
+    } else {
+      return res
+        .status(401)
+        .json({ success: false, error: "Only Admin Deleted" });
     }
-    // } else {
-    //   return res
-    //     .status(401)
-    //     .json({ success: false, error: "Only Admin Deleted" });
-    // }
   } catch (error) {
     console.log(error);
     res.status(500).send(error);

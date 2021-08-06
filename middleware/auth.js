@@ -18,8 +18,6 @@ const authenticateJWT = (req, res, next) => {
       req.token = token;
       req.userID = user.user_id.toString();
       req.role = user.role;
-      // req.isdelete = Boolean(req.body.isdelete);
-      // console.log(req.isdelete);
       // console.log(req.userID);
       return next();
     });
